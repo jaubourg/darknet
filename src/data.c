@@ -217,14 +217,23 @@ box_label *read_boxes(char *filename, int *n)
     const int max_obj_img = 4000;// 30000;
     const int img_hash = (custom_hash(filename) % max_obj_img)*max_obj_img;
     //printf(" img_hash = %d, filename = %s; ", img_hash, filename);
-    float x, y, h, w;
+    float x, y, h, w, proba;
     int id;
     int count = 0;
-    while(fscanf(file, "%d %f %f %f %f", &id, &x, &y, &w, &h) == 5){
+    int nb_scanned;
+    while((nb_scanned = fscanf(file, "%d %f %f %f %f %f", &id, &proba, &x, &y, &w, &h)) >= 5){
+        if (nb_scanned == 5) {
+            h = w;
+            w = y;
+            y = x;
+            x = proba;
+            proba = 1.f;
+        }
         boxes = (box_label*)xrealloc(boxes, (count + 1) * sizeof(box_label));
         boxes[count].track_id = count + img_hash;
         //printf(" boxes[count].track_id = %d, count = %d \n", boxes[count].track_id, count);
         boxes[count].id = id;
+        boxes[count].proba = proba;
         boxes[count].x = x;
         boxes[count].y = y;
         boxes[count].h = h;
@@ -306,7 +315,7 @@ void fill_truth_swag(char *path, float *truth, int classes, int flip, float dx, 
     box_label *boxes = read_boxes(labelpath, &count);
     randomize_boxes(boxes, count);
     correct_boxes(boxes, count, dx, dy, sx, sy, flip);
-    float x,y,w,h;
+    float x,y,w,h,proba;
     int id;
     int i;
 
@@ -316,6 +325,7 @@ void fill_truth_swag(char *path, float *truth, int classes, int flip, float dx, 
         w =  boxes[i].w;
         h =  boxes[i].h;
         id = boxes[i].id;
+        proba = boxes[i].proba;
 
         if (w < .0 || h < .0) continue;
 
@@ -326,7 +336,7 @@ void fill_truth_swag(char *path, float *truth, int classes, int flip, float dx, 
         truth[index++] = w;
         truth[index++] = h;
 
-        if (id < classes) truth[index+id] = 1;
+        if (id < classes) truth[index+id] = proba;
     }
     free(boxes);
 }
@@ -340,7 +350,7 @@ void fill_truth_region(char *path, float *truth, int classes, int num_boxes, int
     box_label *boxes = read_boxes(labelpath, &count);
     randomize_boxes(boxes, count);
     correct_boxes(boxes, count, dx, dy, sx, sy, flip);
-    float x,y,w,h;
+    float x,y,w,h,proba;
     int id;
     int i;
 
@@ -350,6 +360,7 @@ void fill_truth_region(char *path, float *truth, int classes, int num_boxes, int
         w =  boxes[i].w;
         h =  boxes[i].h;
         id = boxes[i].id;
+        proba = boxes[i].proba;
 
         if (w < .001 || h < .001) continue;
 
@@ -363,7 +374,7 @@ void fill_truth_region(char *path, float *truth, int classes, int num_boxes, int
         if (truth[index]) continue;
         truth[index++] = 1;
 
-        if (id < classes) truth[index+id] = 1;
+        if (id < classes) truth[index+id] = proba;
         index += classes;
 
         truth[index++] = x;
@@ -389,7 +400,7 @@ int fill_truth_detection(const char *path, int num_boxes, int truth_size, float 
     randomize_boxes(boxes, count);
     correct_boxes(boxes, count, dx, dy, sx, sy, flip);
     if (count > num_boxes) count = num_boxes;
-    float x, y, w, h;
+    float x, y, w, h, proba;
     int id;
     int sub = 0;
 
@@ -399,6 +410,7 @@ int fill_truth_detection(const char *path, int num_boxes, int truth_size, float 
         w = boxes[i].w;
         h = boxes[i].h;
         id = boxes[i].id;
+        proba = boxes[i].proba;
         int track_id = boxes[i].track_id;
 
         // not detect small objects

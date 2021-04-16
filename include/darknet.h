@@ -993,6 +993,7 @@ typedef struct load_args {
 typedef struct box_label {
     int id;
     int track_id;
+    float proba;
     float x, y, w, h;
     float left, right, top, bottom;
 } box_label;
