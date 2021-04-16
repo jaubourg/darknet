@@ -42,7 +42,7 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, int *mask, int 
     l.outputs = h*w*n*(classes + 4 + 1);
     l.inputs = l.outputs;
     l.max_boxes = max_boxes;
-    l.truth_size = 4 + 2;
+    l.truth_size = 4 + 3;
     l.truths = l.max_boxes*l.truth_size;    // 90*(4 + 1);
     l.labels = (int*)xcalloc(batch * l.w*l.h*l.n, sizeof(int));
     for (i = 0; i < batch * l.w*l.h*l.n; ++i) l.labels[i] = -1;
@@ -306,7 +306,7 @@ void averages_yolo_deltas(int class_index, int box_index, int stride, int classe
     }
 }
 
-void delta_yolo_class(float *output, float *delta, int index, int class_id, int classes, int stride, float *avg_cat, int focal_loss, float label_smooth_eps, float *classes_multipliers, float cls_normalizer)
+void delta_yolo_class(float *output, float *delta, int index, int class_id, float class_proba, int classes, int stride, float *avg_cat, int focal_loss, float label_smooth_eps, float *classes_multipliers, float cls_normalizer)
 {
     int n;
     if (delta[index + stride*class_id]){
@@ -494,8 +494,9 @@ void *process_batch(void* ptr)
                         //l.delta[obj_index] = l.obj_normalizer * (1 - l.output[obj_index]);
 
                         int class_id = state.truth[best_t * l.truth_size + b * l.truths + 4];
+                        float class_proba = state.truth[best_t * l.truth_size + b * l.truths + 5];
                         if (l.map) class_id = l.map[class_id];
-                        delta_yolo_class(l.output, l.delta, class_index, class_id, l.classes, l.w * l.h, 0, l.focal_loss, l.label_smooth_eps, l.classes_multipliers, l.cls_normalizer);
+                        delta_yolo_class(l.output, l.delta, class_index, class_id, class_proba, l.classes, l.w * l.h, 0, l.focal_loss, l.label_smooth_eps, l.classes_multipliers, l.cls_normalizer);
                         const float class_multiplier = (l.classes_multipliers) ? l.classes_multipliers[class_id] : 1.0f;
                         if (l.objectness_smooth) l.delta[class_index + stride * class_id] = class_multiplier * (iou_multiplier - l.output[class_index + stride * class_id]);
                         box truth = float_to_box_stride(state.truth + best_t * l.truth_size + b * l.truths, 1);
@@ -538,6 +539,7 @@ void *process_batch(void* ptr)
             int mask_n = int_index(l.mask, best_n, l.n);
             if (mask_n >= 0) {
                 int class_id = state.truth[t * l.truth_size + b * l.truths + 4];
+                float class_proba = state.truth[t * l.truth_size + b * l.truths + 5];
                 if (l.map) class_id = l.map[class_id];
 
                 int box_index = entry_index(l, b, mask_n * l.w * l.h + j * l.w + i, 0);
@@ -574,7 +576,7 @@ void *process_batch(void* ptr)
                 else l.delta[obj_index] = class_multiplier * l.obj_normalizer * (1 - l.output[obj_index]);
 
                 int class_index = entry_index(l, b, mask_n * l.w * l.h + j * l.w + i, 4 + 1);
-                delta_yolo_class(l.output, l.delta, class_index, class_id, l.classes, l.w * l.h, &avg_cat, l.focal_loss, l.label_smooth_eps, l.classes_multipliers, l.cls_normalizer);
+                delta_yolo_class(l.output, l.delta, class_index, class_id, class_proba, l.classes, l.w * l.h, &avg_cat, l.focal_loss, l.label_smooth_eps, l.classes_multipliers, l.cls_normalizer);
 
                 //printf(" label: class_id = %d, truth.x = %f, truth.y = %f, truth.w = %f, truth.h = %f \n", class_id, truth.x, truth.y, truth.w, truth.h);
                 //printf(" mask_n = %d, l.output[obj_index] = %f, l.output[class_index + class_id] = %f \n\n", mask_n, l.output[obj_index], l.output[class_index + class_id]);
@@ -597,6 +599,7 @@ void *process_batch(void* ptr)
 
                     if (iou > l.iou_thresh) {
                         int class_id = state.truth[t * l.truth_size + b * l.truths + 4];
+                        float class_proba = state.truth[t * l.truth_size + b * l.truths + 5];
                         if (l.map) class_id = l.map[class_id];
 
                         int box_index = entry_index(l, b, mask_n * l.w * l.h + j * l.w + i, 0);
@@ -626,7 +629,7 @@ void *process_batch(void* ptr)
                         else l.delta[obj_index] = class_multiplier * l.obj_normalizer * (1 - l.output[obj_index]);
 
                         int class_index = entry_index(l, b, mask_n * l.w * l.h + j * l.w + i, 4 + 1);
-                        delta_yolo_class(l.output, l.delta, class_index, class_id, l.classes, l.w * l.h, &avg_cat, l.focal_loss, l.label_smooth_eps, l.classes_multipliers, l.cls_normalizer);
+                        delta_yolo_class(l.output, l.delta, class_index, class_id, class_proba, l.classes, l.w * l.h, &avg_cat, l.focal_loss, l.label_smooth_eps, l.classes_multipliers, l.cls_normalizer);
 
                         ++(args->count);
                         ++(args->class_count);

@@ -469,9 +469,10 @@ int fill_truth_detection(const char *path, int num_boxes, int truth_size, float 
         truth[(i-sub)*truth_size +2] = w;
         truth[(i-sub)*truth_size +3] = h;
         truth[(i-sub)*truth_size +4] = id;
-        truth[(i-sub)*truth_size +5] = track_id;
+        truth[(i-sub)*truth_size +5] = proba;
+        truth[(i-sub)*truth_size +6] = track_id;
         //float val = track_id;
-        //printf(" i = %d, sub = %d, truth_size = %d, track_id = %d, %f, %f\n", i, sub, truth_size, track_id, truth[(i - sub)*truth_size + 5], val);
+        //printf(" i = %d, sub = %d, truth_size = %d, track_id = %d, %f, %f\n", i, sub, truth_size, track_id, truth[(i - sub)*truth_size + 6], val);
 
         if (min_w_h == 0) min_w_h = w*net_w;
         if (min_w_h > w*net_w) min_w_h = w*net_w;
@@ -1258,7 +1259,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
 
 
             int min_w_h = fill_truth_detection(filename, boxes, truth_size, truth, classes, flip, dx, dy, 1. / sx, 1. / sy, w, h);
-            //for (int z = 0; z < boxes; ++z) if(truth[z*truth_size] > 0) printf(" track_id = %f \n", truth[z*truth_size + 5]);
+            //for (int z = 0; z < boxes; ++z) if(truth[z*truth_size] > 0) printf(" track_id = %f \n", truth[z*truth_size + 6]);
             //printf(" truth_size = %d \n", truth_size);
 
             if ((min_w_h / 8) < blur && blur > 1) blur = min_w_h / 8;   // disable blur if one of the objects is too small
