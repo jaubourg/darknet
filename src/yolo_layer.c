@@ -333,7 +333,7 @@ void delta_yolo_class(float *output, float *delta, int index, int class_id, floa
         //float grad = (1 - pt) * (2 * pt*logf(pt) + pt - 1);    // https://github.com/unsky/focal-loss
 
         for (n = 0; n < classes; ++n) {
-            delta[index + stride*n] = (((n == class_id) ? 1 : 0) - output[index + stride*n]);
+            delta[index + stride*n] = (((n == class_id) ? class_proba : 0) - output[index + stride*n]);
 
             delta[index + stride*n] *= alpha*grad;
 
@@ -343,7 +343,7 @@ void delta_yolo_class(float *output, float *delta, int index, int class_id, floa
     else {
         // default
         for (n = 0; n < classes; ++n) {
-            float y_true = ((n == class_id) ? 1 : 0);
+            float y_true = ((n == class_id) ? class_proba : 0);
             if (label_smooth_eps) y_true = y_true *  (1 - label_smooth_eps) + 0.5*label_smooth_eps;
             float result_delta = y_true - output[index + stride*n];
             if (!isnan(result_delta) && !isinf(result_delta)) delta[index + stride*n] = result_delta;
