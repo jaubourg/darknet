@@ -228,6 +228,17 @@ box_label *read_boxes(char *filename, int *n)
             y = x;
             x = proba;
             proba = 1.f;
+        } else {
+            int tmp = ceil( proba * 10.f );
+            if ( tmp <= 0 ) {
+                continue;
+            }
+            if ( tmp > 9 ) {
+                tmp = 9;
+            }
+            id = tmp - 1;
+            printf("CLASS: %d", id);
+            proba = 1.f;
         }
         boxes = (box_label*)xrealloc(boxes, (count + 1) * sizeof(box_label));
         boxes[count].track_id = count + img_hash;
